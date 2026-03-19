@@ -3,6 +3,11 @@ src=".github/repo_icon.png" alt="App icon">
 
 # FlorisBoard [![Crowdin](https://badges.crowdin.net/florisboard/localized.svg)](https://crowdin.florisboard.org) [![Matrix badge](https://img.shields.io/badge/chat-%23florisboard%3amatrix.org-blue)](https://matrix.to/#/#florisboard:matrix.org) [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md) [![FlorisBoard CI](https://github.com/florisboard/florisboard/actions/workflows/android.yml/badge.svg?event=push)](https://github.com/florisboard/florisboard/actions/workflows/android.yml)
 
+## Fork changes
+
+- **LinkCleaner**: cleans copied links (clipboard) + includes link handling activities.
+- **Glide typing**: re-enabled and fixed for English (US) QWERTY (dictionary lazy-load so swipe commits words).
+
 **FlorisBoard** is a free and open-source keyboard for Android 8.0+
 devices. It aims at being modern, user-friendly and customizable while
 fully respecting your privacy. Currently in beta state.

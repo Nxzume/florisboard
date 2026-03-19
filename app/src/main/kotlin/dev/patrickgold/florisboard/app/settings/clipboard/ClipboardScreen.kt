@@ -55,6 +55,17 @@ fun ClipboardScreen() = FlorisScreen {
             entries = enumDisplayEntriesOf(ClipboardSyncBehavior::class),
             enabledIf = { prefs.clipboard.useInternalClipboard isEqualTo true },
         )
+        SwitchPreference(
+            prefs.clipboard.linkCleanerEnabled,
+            title = stringRes(R.string.pref__clipboard__link_cleaner_enabled__label),
+            summary = stringRes(R.string.pref__clipboard__link_cleaner_enabled__summary),
+        )
+        SwitchPreference(
+            prefs.clipboard.linkCleanerAggressive,
+            title = stringRes(R.string.pref__clipboard__link_cleaner_aggressive__label),
+            summary = stringRes(R.string.pref__clipboard__link_cleaner_aggressive__summary),
+            enabledIf = { prefs.clipboard.linkCleanerEnabled isEqualTo true },
+        )
 
         PreferenceGroup(title = stringRes(R.string.pref__clipboard__group_clipboard_suggestion__label)) {
             SwitchPreference(

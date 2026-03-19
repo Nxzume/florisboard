@@ -715,6 +715,10 @@
     <string name="pref__clipboard__use_internal_clipboard__summary">Use an internal clipboard instead of the system clipboard</string>
     <string name="pref__clipboard__sync_from_system_clipboard__label">Sync from system clipboard</string>
     <string name="pref__clipboard__sync_to_system_clipboard__label">Sync to system clipboard</string>
+    <string name="pref__clipboard__link_cleaner_enabled__label">Link cleaning</string>
+    <string name="pref__clipboard__link_cleaner_enabled__summary">Strip tracking parameters from copied links.</string>
+    <string name="pref__clipboard__link_cleaner_aggressive__label">Aggressive link cleaning</string>
+    <string name="pref__clipboard__link_cleaner_aggressive__summary">Remove most query parameters. Can break some links.</string>
     <string name="pref__clipboard__group_clipboard_suggestion__label">Clipboard suggestions</string>
     <string name="pref__clipboard__suggestion_enabled__label" comment="Preference title">Clipboard content suggestions</string>
     <string name="pref__clipboard__suggestion_enabled__summary" comment="Preference summary">Suggest previously copied clipboard content</string>

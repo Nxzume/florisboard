@@ -45,6 +45,7 @@ import org.florisboard.lib.android.setOrClearPrimaryClip
 import org.florisboard.lib.android.showShortToastSync
 import org.florisboard.lib.android.systemService
 import org.florisboard.lib.kotlin.tryOrNull
+import org.florisboard.linkcleaner.LinkCleanerBridge
 
 /**
  * [ClipboardManager] manages the clipboard and clipboard history.
@@ -105,6 +106,10 @@ class ClipboardManager(
 
     private val primaryClipLastFromCallbackGuard = Mutex(locked = false)
     private var primaryClipLastFromCallback: ClipData? = null
+
+    /** Avoid re-entry when we replace the system clipboard with a sanitized copy. */
+    @Volatile
+    private var applyingLinkSanitize = false
     val primaryClipFlow: StateFlow<ClipboardItem?>
         field = MutableStateFlow(null)
     inline var primaryClip
@@ -165,6 +170,30 @@ class ClipboardManager(
      * Called by system clipboard when the system primary clip has changed.
      */
     override fun onPrimaryClipChanged() {
+        if (!applyingLinkSanitize && prefs.clipboard.linkCleanerEnabled.get()) {
+            try {
+                val clip = systemClipboardManager.primaryClip
+                val text = clip?.getItemAt(0)?.coerceToText(appContext)?.toString()
+                if (!text.isNullOrBlank()) {
+                    val cleaned = LinkCleanerBridge.sanitize(
+                        appContext,
+                        text,
+                        aggressive = prefs.clipboard.linkCleanerAggressive.get(),
+                    )
+                    if (cleaned != text) {
+                        applyingLinkSanitize = true
+                        try {
+                            val label = clip.description?.label?.toString() ?: "text"
+                            systemClipboardManager.setPrimaryClip(ClipData.newPlainText(label, cleaned))
+                        } finally {
+                            applyingLinkSanitize = false
+                        }
+                    }
+                }
+            } catch (_: Throwable) {
+                applyingLinkSanitize = false
+            }
+        }
         val syncBehavior = prefs.clipboard.syncToFloris.get()
         if (!prefs.clipboard.useInternalClipboard.get() || syncBehavior != ClipboardSyncBehavior.NO_EVENTS) {
             val systemPrimaryClip = systemClipboardManager.primaryClip

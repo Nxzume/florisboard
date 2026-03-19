@@ -217,6 +217,7 @@ dependencies {
     implementation(projects.lib.kotlin)
     implementation(projects.lib.native)
     implementation(projects.lib.snygg)
+    implementation(projects.lib.linkcleaner)
 
     testImplementation(libs.kotest.assertions.core)
     testImplementation(libs.kotest.property)

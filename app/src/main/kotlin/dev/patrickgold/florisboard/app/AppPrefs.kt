@@ -89,6 +89,14 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
             key = "clipboard__sync_to_system",
             default = ClipboardSyncBehavior.NO_EVENTS,
         )
+        val linkCleanerEnabled = boolean(
+            key = "clipboard__link_cleaner_enabled",
+            default = true,
+        )
+        val linkCleanerAggressive = boolean(
+            key = "clipboard__link_cleaner_aggressive",
+            default = true,
+        )
         val suggestionEnabled = boolean(
             key = "clipboard__suggestion_enabled",
             default = true,
@@ -341,7 +349,7 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
     inner class Glide {
         val enabled = boolean(
             key = "glide__enabled",
-            default = false,
+            default = true,
         )
         val showTrail = boolean(
             key = "glide__show_trail",

@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "paramRules": {
+    "removeExact": [
+      "fbclid",
+      "gclid",
+      "msclkid",
+      "igshid",
+      "mc_eid",
+      "mc_cid",
+      "ref",
+      "ref_src"
+    ],
+    "removePrefixes": [
+      "utm_",
+      "utm-",
+      "vero_",
+      "pk_"
+    ],
+    "allowExact": [
+      "v",
+      "id",
+      "t",
+      "start",
+      "end",
+      "time_continue",
+      "list",
+      "index"
+    ],
+    "aggressive": true,
+    "domainScoped": [
+      {
+        "domains": [
+          "youtube.com",
+          "youtu.be"
+        ],
+        "removeExact": [
+          "si"
+        ],
+        "removePrefixes": [],
+        "allowExact": []
+      }
+    ]
+  },
+  "redirectors": [
+    {
+      "hosts": ["l.facebook.com", "lm.facebook.com", "l.messenger.com"],
+      "extractQueryParams": ["u", "url"],
+      "allowHosts": []
+    },
+    {
+      "hosts": ["www.google.com"],
+      "extractQueryParams": ["url", "q"],
+      "allowHosts": []
+    }
+  ]
+}

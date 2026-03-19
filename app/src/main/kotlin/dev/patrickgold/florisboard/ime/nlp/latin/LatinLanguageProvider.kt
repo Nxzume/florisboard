@@ -68,14 +68,7 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
         // The subtype we get here contains a lot of data, however we are only interested in subtype.primaryLocale and
         // subtype.secondaryLocales.
 
-        wordData.withLock { wordData ->
-            if (wordData.isEmpty()) {
-                // Here we use readText() because the test dictionary is a json dictionary
-                val rawData = appContext.assets.readText("ime/dict/data.json")
-                val jsonData = Json.decodeFromString(wordDataSerializer, rawData)
-                wordData.putAll(jsonData)
-            }
-        }
+        ensureWordDataLoaded()
     }
 
     override suspend fun spell(
@@ -137,11 +130,23 @@ class LatinLanguageProvider(context: Context) : SpellingProvider, SuggestionProv
     }
 
     override suspend fun getListOfWords(subtype: Subtype): List<String> {
+        ensureWordDataLoaded()
         return wordData.withLock { it.keys.toList() }
     }
 
     override suspend fun getFrequencyForWord(subtype: Subtype, word: String): Double {
+        ensureWordDataLoaded()
         return wordData.withLock { it.getOrDefault(word, 0) / 255.0 }
+    }
+
+    private suspend fun ensureWordDataLoaded() = withContext(Dispatchers.IO) {
+        wordData.withLock { wordData ->
+            if (wordData.isNotEmpty()) return@withLock
+
+            val rawData = appContext.assets.readText("ime/dict/data.json")
+            val jsonData = Json.decodeFromString(wordDataSerializer, rawData)
+            wordData.putAll(jsonData)
+        }
     }
 
     override suspend fun destroy() {
