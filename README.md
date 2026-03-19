@@ -5,7 +5,7 @@ src=".github/repo_icon.png" alt="App icon">
 
 ## Fork changes
 
-- **LinkCleaner**: cleans copied links (clipboard) + includes link handling activities.
+- **LinkCleaner**: removes trackers/tracking parameters from links (clipboard) + includes link handling activities.
 - **Glide typing**: re-enabled and fixed for English (US) QWERTY (dictionary lazy-load so swipe commits words).
 
 **FlorisBoard** is a free and open-source keyboard for Android 8.0+
