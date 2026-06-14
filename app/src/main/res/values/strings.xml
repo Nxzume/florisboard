@@ -72,6 +72,8 @@
     <string name="quick_action__clipboard_cut__tooltip">Perform clipboard cut</string>
     <string name="quick_action__clipboard_paste" comment="Please mind the limited available space for the quick action strings">Paste</string>
     <string name="quick_action__clipboard_paste__tooltip">Perform clipboard paste</string>
+    <string name="quick_action__clipboard_open_link" comment="Please mind the limited available space for the quick action strings">Open link</string>
+    <string name="quick_action__clipboard_open_link__tooltip">Open the link on the clipboard in browser</string>
     <string name="quick_action__clipboard_select_all" comment="Please mind the limited available space for the quick action strings">Select all</string>
     <string name="quick_action__clipboard_select_all__tooltip">Perform clipboard select all</string>
     <string name="quick_action__forward_delete" comment="Please mind the limited available space for the quick action strings">Forward delete</string>
@@ -719,6 +721,12 @@
     <string name="pref__clipboard__link_cleaner_enabled__summary">Strip tracking parameters from copied links.</string>
     <string name="pref__clipboard__link_cleaner_aggressive__label">Aggressive link cleaning</string>
     <string name="pref__clipboard__link_cleaner_aggressive__summary">Remove most query parameters. Can break some links.</string>
+    <string name="pref__clipboard__link_open_bubble__label">Floating open-link button</string>
+    <string name="pref__clipboard__link_open_bubble__summary">When you copy a URL and the keyboard is hidden, show a draggable bubble to open it in the browser. Requires Android “Display over other apps” for FlorisBoard (system Settings → Apps → Special access).</string>
+    <string name="pref__clipboard__link_open_bubble_permission__label">Display over other apps</string>
+    <string name="pref__clipboard__link_open_bubble_permission__granted">Permission granted. Tap to manage.</string>
+    <string name="pref__clipboard__link_open_bubble_permission__needed">Permission required. Tap to grant.</string>
+    <string name="link_open_bubble__content_description">Open copied link</string>
     <string name="pref__clipboard__group_clipboard_suggestion__label">Clipboard suggestions</string>
     <string name="pref__clipboard__suggestion_enabled__label" comment="Preference title">Clipboard content suggestions</string>
     <string name="pref__clipboard__suggestion_enabled__summary" comment="Preference summary">Suggest previously copied clipboard content</string>

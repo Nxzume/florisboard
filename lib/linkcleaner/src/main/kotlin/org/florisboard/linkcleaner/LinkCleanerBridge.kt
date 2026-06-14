@@ -1,6 +1,7 @@
 package org.florisboard.linkcleaner
 
 import android.content.Context
+import android.net.Uri
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -19,6 +20,41 @@ object LinkCleanerBridge {
         if (text.isEmpty()) return text
         val cleaner = getCleaner(context, aggressive)
         return cleaner.cleanTextForUrls(text)
+    }
+
+    /**
+     * Returns the first http(s) URL in [text] suitable for [android.content.Intent.ACTION_VIEW],
+     * or null. When [clean] is true, applies [sanitize] to each candidate segment first.
+     */
+    fun firstOpenableHttpUrl(
+        context: Context,
+        text: String,
+        clean: Boolean,
+        aggressive: Boolean,
+    ): String? {
+        if (text.isEmpty()) return null
+        var searchFrom = 0
+        while (searchFrom < text.length) {
+            val match = UrlDetector.urlRegex.find(text, searchFrom) ?: return null
+            val segment = match.value.trimEnd('.', ',', ';', ')', ']', '}')
+            val processed = if (clean) {
+                sanitize(context, segment, aggressive).trim()
+            } else {
+                segment
+            }
+            val withScheme = when {
+                processed.startsWith("http://", ignoreCase = true) ||
+                    processed.startsWith("https://", ignoreCase = true) -> processed
+                else -> "https://$processed"
+            }
+            val uri = Uri.parse(withScheme)
+            val scheme = uri.scheme?.lowercase()
+            if ((scheme == "http" || scheme == "https") && !uri.host.isNullOrBlank()) {
+                return withScheme
+            }
+            searchFrom = match.range.last + 1
+        }
+        return null
     }
 
     private fun getBundledAggressive(context: Context): Boolean {

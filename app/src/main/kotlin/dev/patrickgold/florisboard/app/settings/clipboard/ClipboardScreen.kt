@@ -16,7 +16,20 @@
 
 package dev.patrickgold.florisboard.app.settings.clipboard
 
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.enumDisplayEntriesOf
 import dev.patrickgold.florisboard.ime.clipboard.CLIPBOARD_HISTORY_NUM_GRID_COLUMNS_AUTO
@@ -25,6 +38,7 @@ import dev.patrickgold.florisboard.lib.compose.FlorisScreen
 import dev.patrickgold.jetpref.datastore.ui.DialogSliderPreference
 import dev.patrickgold.jetpref.datastore.ui.ExperimentalJetPrefDatastoreUi
 import dev.patrickgold.jetpref.datastore.ui.ListPreference
+import dev.patrickgold.jetpref.datastore.ui.Preference
 import dev.patrickgold.jetpref.datastore.ui.PreferenceGroup
 import dev.patrickgold.jetpref.datastore.ui.SwitchPreference
 import org.florisboard.lib.android.AndroidVersion
@@ -38,6 +52,25 @@ fun ClipboardScreen() = FlorisScreen {
     previewFieldVisible = true
 
     content {
+        val context = LocalContext.current
+        val lifecycleOwner = LocalLifecycleOwner.current
+        var canDrawOverlays by remember {
+            mutableStateOf(
+                Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(context),
+            )
+        }
+        // Refresh the overlay-permission status when returning from system settings.
+        LaunchedEffect(lifecycleOwner) {
+            val observer = LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    canDrawOverlays =
+                        Build.VERSION.SDK_INT < Build.VERSION_CODES.M ||
+                            Settings.canDrawOverlays(context)
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+        }
+
         SwitchPreference(
             prefs.clipboard.useInternalClipboard,
             title = stringRes(R.string.pref__clipboard__use_internal_clipboard__label),
@@ -65,6 +98,35 @@ fun ClipboardScreen() = FlorisScreen {
             title = stringRes(R.string.pref__clipboard__link_cleaner_aggressive__label),
             summary = stringRes(R.string.pref__clipboard__link_cleaner_aggressive__summary),
             enabledIf = { prefs.clipboard.linkCleanerEnabled isEqualTo true },
+        )
+        SwitchPreference(
+            prefs.clipboard.linkOpenBubbleEnabled,
+            title = stringRes(R.string.pref__clipboard__link_open_bubble__label),
+            summary = stringRes(R.string.pref__clipboard__link_open_bubble__summary),
+        )
+        Preference(
+            title = stringRes(R.string.pref__clipboard__link_open_bubble_permission__label),
+            summary = if (canDrawOverlays) {
+                stringRes(R.string.pref__clipboard__link_open_bubble_permission__granted)
+            } else {
+                stringRes(R.string.pref__clipboard__link_open_bubble_permission__needed)
+            },
+            onClick = {
+                val intent = Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:" + context.packageName),
+                ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                runCatching { context.startActivity(intent) }
+                    .onFailure {
+                        runCatching {
+                            context.startActivity(
+                                Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                            )
+                        }
+                    }
+            },
+            enabledIf = { prefs.clipboard.linkOpenBubbleEnabled isEqualTo true },
         )
 
         PreferenceGroup(title = stringRes(R.string.pref__clipboard__group_clipboard_suggestion__label)) {

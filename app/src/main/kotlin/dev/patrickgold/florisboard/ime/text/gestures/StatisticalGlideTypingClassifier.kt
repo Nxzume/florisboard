@@ -25,6 +25,7 @@ import dev.patrickgold.florisboard.ime.keyboard.KeyData
 import dev.patrickgold.florisboard.ime.text.key.KeyCode
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKey
 import dev.patrickgold.florisboard.nlpManager
+import androidx.compose.ui.geometry.Offset
 import java.text.Normalizer
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -38,6 +39,25 @@ import kotlin.math.sqrt
 
 private fun TextKey.baseCode(): Int {
     return (data as? KeyData)?.code ?: KeyCode.UNSPECIFIED
+}
+
+/** Center aligned with Compose key rendering (`topLeft.toIntOffset()`). */
+private fun TextKey.layoutCenter(): Offset {
+    val left = visibleBounds.left.toInt().toFloat()
+    val top = visibleBounds.top.toInt().toFloat()
+    return Offset(left + visibleBounds.width / 2f, top + visibleBounds.height / 2f)
+}
+
+private fun List<TextKey>.layoutGeometrySignature(): Long {
+    var hash = 0L
+    for (key in this) {
+        val bounds = key.visibleBounds
+        hash = 31 * hash + bounds.left.toRawBits()
+        hash = 31 * hash + bounds.top.toRawBits()
+        hash = 31 * hash + bounds.right.toRawBits()
+        hash = 31 * hash + bounds.bottom.toRawBits()
+    }
+    return hash
 }
 
 /**
@@ -55,6 +75,7 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
     private lateinit var pruner: Pruner
     private var wordDataSubtype: Subtype? = null
     private var layoutSubtype: Subtype? = null
+    private var layoutGeometrySignature: Long = 0L
     private var currentSubtype: Subtype? = null
     val ready: Boolean
         get() = currentSubtype == layoutSubtype && wordDataSubtype == layoutSubtype && wordDataSubtype != null
@@ -118,29 +139,25 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
 
     override fun setLayout(keyViews: List<TextKey>, subtype: Subtype) {
         setWordData(subtype)
-        // stop duplicate calls
-        if (layoutSubtype == subtype && keys == keyViews) {
+        val geometrySignature = keyViews.layoutGeometrySignature()
+        val sameSubtype = layoutSubtype == subtype
+        if (sameSubtype && geometrySignature == layoutGeometrySignature && keys.isNotEmpty()) {
             return
         }
-
-        // if only layout changed but not subtype
-        val layoutChanged = layoutSubtype == subtype
-
+        layoutGeometrySignature = geometrySignature
         keysByCharacter.clear()
         keys.clear()
         keyViews.forEach {
             keysByCharacter[it.baseCode()] = it
             keys.add(it)
         }
+        if (keyViews.isNotEmpty()) {
+            distanceThresholdSquared = (keyViews.first().visibleBounds.width / 4).toInt()
+            distanceThresholdSquared *= distanceThresholdSquared
+        }
         layoutSubtype = subtype
-        distanceThresholdSquared = (keyViews.first().visibleBounds.width / 4).toInt()
-        distanceThresholdSquared *= distanceThresholdSquared
-
-        if (
-            (wordDataSubtype == layoutSubtype)
-            || layoutChanged // should force a re-initialize
-        ) {
-            initializePruner(layoutChanged)
+        if (wordDataSubtype == layoutSubtype) {
+            initializePruner(invalidateCache = sameSubtype)
         }
     }
 
@@ -407,7 +424,7 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
             ): Iterable<Int> {
                 val keyDistances = HashMap<TextKey, Float>()
                 for (key in keys) {
-                    val visibleBoundsCenter = key.visibleBounds.center
+                    val visibleBoundsCenter = key.layoutCenter()
                     val distance = Gesture.distance(
                         visibleBoundsCenter.x,
                         visibleBoundsCenter.y,
@@ -461,7 +478,7 @@ class StatisticalGlideTypingClassifier(context: Context) : GlideTypingClassifier
                             continue
                         }
                     }
-                    val visibleBoundsCenter = key.visibleBounds.center
+                    val visibleBoundsCenter = key.layoutCenter()
 
                     // We adda little loop on  the key for duplicate letters
                     // so that we can differentiate words like pool and poll, lull and lul, etc...

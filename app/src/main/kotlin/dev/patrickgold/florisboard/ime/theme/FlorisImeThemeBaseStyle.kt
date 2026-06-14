@@ -105,7 +105,7 @@ val FlorisImeThemeBaseStyle = SnyggStylesheet.v2 {
         foreground = `var`("--on-surface-variant")
         fontFamily = genericFontFamily(FontFamily.Monospace)
         fontSize = fontSize(12.sp)
-        padding = padding(0.dp, 1.dp, 1.dp, 0.dp)
+        padding = padding(0.dp, 1.dp, 2.dp, 0.dp)
         textMaxLines = textMaxLines(1)
     }
     FlorisImeUi.KeyPopupBox.elementName {

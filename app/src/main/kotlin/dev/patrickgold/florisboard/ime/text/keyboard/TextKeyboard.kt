@@ -35,12 +35,23 @@ class TextKeyboard(
         get() = arrangement.sumOf { it.size }
 
     override fun getKeyForPos(pointerX: Float, pointerY: Float): TextKey? {
+        var bestKey: TextKey? = null
+        var bestDistanceSquared = Float.MAX_VALUE
         for (key in keys()) {
-            if (key.touchBounds.contains(pointerX, pointerY)) {
-                return key
+            if (!key.isVisible || !key.isEnabled) continue
+            if (!key.touchBounds.contains(pointerX, pointerY)) continue
+            // Match Compose rendering (absoluteOffset uses truncated top-left).
+            val centerX = key.visibleBounds.left.toInt() + key.visibleBounds.width / 2f
+            val centerY = key.visibleBounds.top.toInt() + key.visibleBounds.height / 2f
+            val dx = pointerX - centerX
+            val dy = pointerY - centerY
+            val distanceSquared = dx * dx + dy * dy
+            if (distanceSquared < bestDistanceSquared) {
+                bestDistanceSquared = distanceSquared
+                bestKey = key
             }
         }
-        return null
+        return bestKey
     }
 
     override fun layout(

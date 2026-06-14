@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
+import dev.patrickgold.florisboard.clipboardManager
 import dev.patrickgold.florisboard.ime.smartbar.SmartbarLayout
 import dev.patrickgold.florisboard.ime.text.keyboard.TextKeyData
 import dev.patrickgold.florisboard.keyboardManager
@@ -47,21 +48,25 @@ fun QuickActionsRow(
     val prefs by FlorisPreferenceStore
     val context = LocalContext.current
     val keyboardManager by context.keyboardManager()
+    val clipboardManager by context.clipboardManager()
 
     val flipToggles by prefs.smartbar.flipToggles.collectAsState()
     val evaluator by keyboardManager.activeSmartbarEvaluator.collectAsState()
     val smartbarLayout by prefs.smartbar.layout.collectAsState()
     val actionArrangement by prefs.smartbar.actionArrangement.collectAsState()
     val sharedActionsExpanded by prefs.smartbar.sharedActionsExpanded.collectAsState()
+    val openableClipboardUrl by clipboardManager.openableClipboardUrlFlow.collectAsState()
 
-    val dynamicActions = remember(smartbarLayout, actionArrangement) {
+    val rowActions = remember(smartbarLayout, actionArrangement, evaluator.version, openableClipboardUrl) {
+        val dynamic = actionArrangement.dynamicActions
+        val visible = dynamic.filter { evaluator.evaluateVisible(it.keyData()) }
         if (smartbarLayout == SmartbarLayout.ACTIONS_ONLY && actionArrangement.stickyAction != null) {
             buildList {
                 add(actionArrangement.stickyAction!!)
-                addAll(actionArrangement.dynamicActions)
+                addAll(visible)
             }
         } else {
-            actionArrangement.dynamicActions
+            visible
         }
     }
     val showOverflowAction = actionArrangement.stickyAction != null ||
@@ -71,16 +76,17 @@ fun QuickActionsRow(
         val width = constraints.maxWidth.toDp()
         val height = constraints.maxHeight.toDp()
         val numActionsToShow = ((width / height).toInt() - (if (showOverflowAction) 1 else 0)).coerceAtLeast(0)
-        val visibleActions = dynamicActions
-            .subList(0, numActionsToShow.coerceAtMost(dynamicActions.size))
+        val visibleActions = rowActions
+            .subList(0, numActionsToShow.coerceAtMost(rowActions.size))
 
         SideEffect {
+            val shown = visibleActions.size
             keyboardManager.smartbarVisibleDynamicActionsCount =
                 if (smartbarLayout == SmartbarLayout.ACTIONS_ONLY && actionArrangement.stickyAction != null) {
-                    numActionsToShow - 1
+                    (shown - 1).coerceAtLeast(0)
                 } else {
-                    numActionsToShow
-                }.coerceAtLeast(0)
+                    shown
+                }
         }
 
         SnyggRow(

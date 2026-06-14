@@ -121,6 +121,7 @@ data class TextKeyData(
                 CLIPBOARD_CLEAR_HISTORY,
                 CLIPBOARD_CLEAR_FULL_HISTORY,
                 CLIPBOARD_CLEAR_PRIMARY_CLIP,
+                CLIPBOARD_OPEN_LINK,
                 TOGGLE_COMPACT_LAYOUT,
                 COMPACT_LAYOUT_TO_LEFT,
                 COMPACT_LAYOUT_TO_RIGHT,
@@ -335,6 +336,12 @@ data class TextKeyData(
             type = KeyType.SYSTEM_GUI,
             code = KeyCode.CLIPBOARD_CLEAR_PRIMARY_CLIP,
             label = "clipboard_clear_primary_clip",
+        )
+        /** Predefined key data for [KeyCode.CLIPBOARD_OPEN_LINK] */
+        val CLIPBOARD_OPEN_LINK = TextKeyData(
+            type = KeyType.SYSTEM_GUI,
+            code = KeyCode.CLIPBOARD_OPEN_LINK,
+            label = "clipboard_open_link",
         )
 
         /** Predefined key data for [KeyCode.TOGGLE_FLOATING_WINDOW] */

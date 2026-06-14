@@ -27,11 +27,12 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -56,6 +57,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import dev.patrickgold.florisboard.FlorisImeService
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
@@ -87,9 +89,6 @@ import dev.patrickgold.florisboard.lib.devtools.LogTopic
 import dev.patrickgold.florisboard.lib.devtools.flogDebug
 import dev.patrickgold.florisboard.lib.toIntOffset
 import dev.patrickgold.jetpref.datastore.model.collectAsState
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.onFailure
-import kotlinx.coroutines.isActive
 import org.florisboard.lib.android.isOrientationLandscape
 import org.florisboard.lib.compose.DisposableLifecycleEffect
 import org.florisboard.lib.snygg.SnyggSelector
@@ -122,12 +121,7 @@ fun TextKeyboardLayout(
 
     val controller = remember { TextKeyboardLayoutController(context) }.also {
         it.keyboard = keyboard
-        if (glideEnabled && keyboard.mode == KeyboardMode.CHARACTERS) {
-            val keys = keyboard.keys().asSequence().toList()
-            glideTypingManager.setLayout(keys)
-        }
     }
-    val touchEventChannel = remember { Channel<MotionEvent>(64) }
 
     fun resetAllKeys() {
         try {
@@ -171,14 +165,7 @@ fun TextKeyboardLayout(
                     MotionEvent.ACTION_UP,
                     MotionEvent.ACTION_CANCEL,
                         -> {
-                        val clonedEvent = MotionEvent.obtain(event)
-                        touchEventChannel
-                            .trySend(clonedEvent)
-                            .onFailure {
-                                // Make sure to prevent MotionEvent memory leakage
-                                // in case the input channel is full
-                                clonedEvent.recycle()
-                            }
+                        controller.onTouchEventInternal(event)
                         return@pointerInteropFilter true
                     }
                 }
@@ -243,6 +230,12 @@ fun TextKeyboardLayout(
             }
         }
 
+        SideEffect {
+            if (glideEnabled && keyboard.mode == KeyboardMode.CHARACTERS) {
+                glideTypingManager.setLayout(keyboard.keys().asSequence().toList())
+            }
+        }
+
         val desiredKeyHack = rememberUpdatedState(desiredKey) // TODO quick'n'dirty hack
         val popupUiController = rememberPopupUiController(
             key1 = keyboard,
@@ -302,14 +295,6 @@ fun TextKeyboardLayout(
 
         popupUiController.RenderPopups()
     }
-
-    LaunchedEffect(Unit) {
-        for (event in touchEventChannel) {
-            if (!isActive) break
-            controller.onTouchEventInternal(event)
-            event.recycle()
-        }
-    }
 }
 
 @Composable
@@ -365,8 +350,9 @@ private fun TextKeyButton(
                 attributes = attributes,
                 selector = selector,
                 modifier = Modifier
-                    .wrapContentSize()
-                    .align(if (isTelPadKey) BiasAlignment(0.5f, 0f) else Alignment.TopEnd),
+                    .align(if (isTelPadKey) BiasAlignment(0.5f, 0f) else Alignment.TopEnd)
+                    .padding(top = 1.dp, end = 2.dp)
+                    .wrapContentSize(),
                 text = hintedLabel,
             )
         }
@@ -422,9 +408,24 @@ private class TextKeyboardLayoutController(
         flogDebug { "event=$event" }
         swipeGestureDetector.onTouchEvent(event)
         if (isGlideEnabled && keyboard.mode == KeyboardMode.CHARACTERS) {
-            val glidePointer = pointerMap.findById(0)
+            val glideInitialKey = when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN,
+                MotionEvent.ACTION_POINTER_DOWN -> {
+                    val pointerIndex = event.actionIndex
+                    keyboard.getKeyForPos(event.getX(pointerIndex), event.getY(pointerIndex))
+                }
+                else -> {
+                    if (event.pointerCount == 0) null
+                    else pointerMap.findById(event.getPointerId(0))?.initialKey
+                }
+            }
+            val glidePointer = if (event.pointerCount == 0) {
+                null
+            } else {
+                pointerMap.findById(event.getPointerId(0))
+            }
             val isNotBlocked = glidePointer?.hasTriggeredLongPress != true
-            if (isNotBlocked && glideTypingDetector.onTouchEvent(event, glidePointer?.initialKey)) {
+            if (isNotBlocked && glideTypingDetector.onTouchEvent(event, glideInitialKey)) {
                 for (pointer in pointerMap) {
                     if (pointer.activeKey != null) {
                         onTouchCancelInternal(event, pointer)

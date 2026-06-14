@@ -118,8 +118,15 @@ class ClipboardManager(
             primaryClipFlow.value = v
         }
 
+    private val openableClipboardUrlMutable = MutableStateFlow<String?>(null)
+    /** First http(s) URL in the current clipboard text (cleaned if link cleaning is on), for "Open link" quick action. */
+    val openableClipboardUrlFlow: StateFlow<String?> = openableClipboardUrlMutable
+    private var refreshOpenableUrlJob: Job? = null
+    private var lastOpenableUrlSourceText: String? = null
+
     init {
         systemClipboardManager.addPrimaryClipChangedListener(this)
+        refreshOpenableClipboardUrl()
         cleanUpJob = ioScope.launch {
             while (isActive) {
                 delay(INTERVAL)
@@ -163,6 +170,33 @@ class ClipboardManager(
             }
         } else {
             systemClipboardManager.setOrClearPrimaryClip(item?.toClipData(appContext))
+        }
+        refreshOpenableClipboardUrl()
+    }
+
+    private fun refreshOpenableClipboardUrl() {
+        refreshOpenableUrlJob?.cancel()
+        refreshOpenableUrlJob = ioScope.launch {
+            delay(32)
+            val text = runCatching {
+                systemClipboardManager.primaryClip?.getItemAt(0)?.coerceToText(appContext)?.toString()
+            }.getOrNull()?.takeIf { it.isNotBlank() }
+                ?: primaryClip?.text?.takeIf { it.isNotBlank() }
+            if (text == lastOpenableUrlSourceText) {
+                return@launch
+            }
+            lastOpenableUrlSourceText = text
+            val url = if (text == null) {
+                null
+            } else {
+                LinkCleanerBridge.firstOpenableHttpUrl(
+                    context = appContext,
+                    text = text,
+                    clean = prefs.clipboard.linkCleanerEnabled.get(),
+                    aggressive = prefs.clipboard.linkCleanerAggressive.get(),
+                )
+            }
+            openableClipboardUrlMutable.value = url
         }
     }
 
@@ -239,6 +273,7 @@ class ClipboardManager(
                 }
             }
         }
+        refreshOpenableClipboardUrl()
     }
 
     /**
@@ -432,6 +467,7 @@ class ClipboardManager(
      * Unregisters the system clipboard listener, cancels clipboard clean ups.
      */
     override fun close() {
+        refreshOpenableUrlJob?.cancel()
         systemClipboardManager.removePrimaryClipChangedListener(this)
         cleanUpJob.cancel()
     }

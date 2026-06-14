@@ -25,6 +25,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import dev.patrickgold.florisboard.FlorisImeService
 import dev.patrickgold.florisboard.R
+import dev.patrickgold.florisboard.ime.OpenLinkUtils
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
 import dev.patrickgold.florisboard.appContext
 import dev.patrickgold.florisboard.clipboardManager
@@ -723,6 +724,12 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                 clipboardManager.updatePrimaryClip(null)
                 appContext.showShortToastSync(R.string.clipboard__cleared_primary_clip)
             }
+            KeyCode.CLIPBOARD_OPEN_LINK -> {
+                val url = clipboardManager.openableClipboardUrlFlow.value
+                if (!url.isNullOrBlank()) {
+                    OpenLinkUtils.forwardToBrowser(appContext, url)
+                }
+            }
             KeyCode.TOGGLE_FLOATING_WINDOW -> windowController.actions.toggleFloatingWindow()
             KeyCode.TOGGLE_COMPACT_LAYOUT -> windowController.actions.toggleCompactLayout()
             KeyCode.COMPACT_LAYOUT_TO_LEFT -> windowController.actions.compactLayoutToLeft()
@@ -977,6 +984,10 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                 KeyCode.CLIPBOARD_CLEAR_PRIMARY_CLIP -> {
                     clipboardManager.canBePasted(clipboardManager.primaryClip)
                 }
+                KeyCode.CLIPBOARD_OPEN_LINK -> {
+                    !androidKeyguardManager.let { it.isDeviceLocked || it.isKeyguardLocked }
+                        && clipboardManager.openableClipboardUrlFlow.value != null
+                }
                 KeyCode.CLIPBOARD_SELECT_ALL -> {
                     editorInfo.isRichInputEditor
                 }
@@ -1019,6 +1030,9 @@ class KeyboardManager(context: Context) : InputKeyEventReceiver {
                         UtilityKeyAction.SWITCH_KEYBOARD_APP -> true
                         UtilityKeyAction.DYNAMIC_SWITCH_LANGUAGE_EMOJIS -> shouldShowLanguageSwitch()
                     }
+                }
+                KeyCode.CLIPBOARD_OPEN_LINK -> {
+                    clipboardManager.openableClipboardUrlFlow.value != null
                 }
                 else -> true
             }

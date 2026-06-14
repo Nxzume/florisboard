@@ -25,6 +25,7 @@ import dev.patrickgold.florisboard.nlpManager
 import dev.patrickgold.florisboard.subtypeManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -46,15 +47,23 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var glideTypingClassifier = StatisticalGlideTypingClassifier(context)
-    private var lastTime = System.currentTimeMillis()
+    private var lastPreviewTime = 0L
+    private var previewJob: Job? = null
+    private var commitJob: Job? = null
 
     override fun onGlideComplete(data: GlideTypingGesture.Detector.PointerData) {
-        updateSuggestionsAsync(MAX_SUGGESTION_COUNT, true) {
+        previewJob?.cancel()
+        previewJob = null
+        updateSuggestionsAsync(MAX_SUGGESTION_COUNT, commit = true) {
             glideTypingClassifier.clear()
         }
     }
 
     override fun onGlideCancelled() {
+        previewJob?.cancel()
+        previewJob = null
+        commitJob?.cancel()
+        commitJob = null
         glideTypingClassifier.clear()
     }
 
@@ -63,11 +72,11 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
 
         this.glideTypingClassifier.addGesturePoint(normalized)
 
+        if (!prefs.glide.showPreview.get()) return
         val time = System.currentTimeMillis()
-        if (prefs.glide.showPreview.get() && time - lastTime > prefs.glide.previewRefreshDelay.get()) {
-            updateSuggestionsAsync(1, false) {}
-            lastTime = time
-        }
+        if (time - lastPreviewTime <= prefs.glide.previewRefreshDelay.get()) return
+        lastPreviewTime = time
+        updateSuggestionsAsync(maxSuggestionsToShow = 1, commit = false) {}
     }
 
     /**
@@ -93,7 +102,7 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
             return
         }
 
-        scope.launch(Dispatchers.Default) {
+        val job = scope.launch(Dispatchers.Default) {
             val suggestions = glideTypingClassifier.getSuggestions(MAX_SUGGESTION_COUNT, true)
 
             withContext(Dispatchers.Main) {
@@ -112,6 +121,13 @@ class GlideTypingManager(context: Context) : GlideTypingGesture.Listener {
                 }
                 callback.invoke(true)
             }
+        }
+        if (commit) {
+            commitJob?.cancel()
+            commitJob = job
+        } else {
+            previewJob?.cancel()
+            previewJob = job
         }
     }
 }

@@ -97,6 +97,10 @@ abstract class FlorisPreferenceModel : PreferenceModel() {
             key = "clipboard__link_cleaner_aggressive",
             default = true,
         )
+        val linkOpenBubbleEnabled = boolean(
+            key = "clipboard__link_open_bubble_enabled",
+            default = true,
+        )
         val suggestionEnabled = boolean(
             key = "clipboard__suggestion_enabled",
             default = true,

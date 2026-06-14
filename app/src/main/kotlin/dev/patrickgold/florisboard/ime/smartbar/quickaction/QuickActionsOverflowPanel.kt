@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import dev.patrickgold.florisboard.R
 import dev.patrickgold.florisboard.app.FlorisPreferenceStore
+import dev.patrickgold.florisboard.clipboardManager
 import dev.patrickgold.florisboard.ime.keyboard.FlorisImeSizing
 import dev.patrickgold.florisboard.ime.theme.FlorisImeUi
 import dev.patrickgold.florisboard.keyboardManager
@@ -46,19 +47,24 @@ fun QuickActionsOverflowPanel() {
     val prefs by FlorisPreferenceStore
     val context = LocalContext.current
     val keyboardManager by context.keyboardManager()
+    val clipboardManager by context.clipboardManager()
 
     val actionArrangement by prefs.smartbar.actionArrangement.collectAsState()
     val evaluator by keyboardManager.activeSmartbarEvaluator.collectAsState()
+    val openableClipboardUrl by clipboardManager.openableClipboardUrlFlow.collectAsState()
 
-    val dynamicActions = actionArrangement.dynamicActions
+    val filteredDynamic = remember(actionArrangement, evaluator.version, openableClipboardUrl) {
+        actionArrangement.dynamicActions.filter { evaluator.evaluateVisible(it.keyData()) }
+    }
     val dynamicActionsCountToShow = when {
-        dynamicActions.isEmpty() -> 0
+        filteredDynamic.isEmpty() -> 0
         else -> {
-            (dynamicActions.size - keyboardManager.smartbarVisibleDynamicActionsCount).coerceIn(dynamicActions.indices)
+            (filteredDynamic.size - keyboardManager.smartbarVisibleDynamicActionsCount)
+                .coerceIn(filteredDynamic.indices)
         }
     }
-    val visibleActions = remember(actionArrangement, dynamicActionsCountToShow) {
-        actionArrangement.dynamicActions.takeLast(dynamicActionsCountToShow)
+    val visibleActions = remember(filteredDynamic, dynamicActionsCountToShow) {
+        filteredDynamic.takeLast(dynamicActionsCountToShow)
     }
 
     SnyggBox(
